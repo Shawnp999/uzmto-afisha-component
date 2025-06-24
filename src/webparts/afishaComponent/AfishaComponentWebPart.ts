@@ -3,7 +3,9 @@ import * as ReactDom from 'react-dom';
 import { Version } from '@microsoft/sp-core-library';
 import {
   type IPropertyPaneConfiguration,
-  PropertyPaneTextField
+  PropertyPaneTextField,
+  PropertyPaneToggle,
+  PropertyPaneSlider
 } from '@microsoft/sp-property-pane';
 import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 import { IReadonlyTheme } from '@microsoft/sp-component-base';
@@ -14,6 +16,11 @@ import { IAfishaComponentProps } from './components/IAfishaComponentProps';
 
 export interface IAfishaComponentWebPartProps {
   description: string;
+  maxMovies: number;
+  showGenres: boolean;
+  showDates: boolean;
+  autoRefresh: boolean;
+  refreshInterval: number;
 }
 
 export default class AfishaComponentWebPart extends BaseClientSideWebPart<IAfishaComponentWebPartProps> {
@@ -29,7 +36,12 @@ export default class AfishaComponentWebPart extends BaseClientSideWebPart<IAfish
         isDarkTheme: this._isDarkTheme,
         environmentMessage: this._environmentMessage,
         hasTeamsContext: !!this.context.sdks.microsoftTeams,
-        userDisplayName: this.context.pageContext.user.displayName
+        userDisplayName: this.context.pageContext.user.displayName,
+        maxMovies: this.properties.maxMovies || 20,
+        showGenres: this.properties.showGenres !== false, // default to true
+        showDates: this.properties.showDates !== false,   // default to true
+        autoRefresh: this.properties.autoRefresh || false,
+        refreshInterval: this.properties.refreshInterval || 60
       }
     );
 
@@ -41,8 +53,6 @@ export default class AfishaComponentWebPart extends BaseClientSideWebPart<IAfish
       this._environmentMessage = message;
     });
   }
-
-
 
   private _getEnvironmentMessage(): Promise<string> {
     if (!!this.context.sdks.microsoftTeams) { // running in Teams, office.com or Outlook
@@ -86,7 +96,6 @@ export default class AfishaComponentWebPart extends BaseClientSideWebPart<IAfish
       this.domElement.style.setProperty('--link', semanticColors.link || null);
       this.domElement.style.setProperty('--linkHovered', semanticColors.linkHovered || null);
     }
-
   }
 
   protected onDispose(): void {
@@ -110,6 +119,26 @@ export default class AfishaComponentWebPart extends BaseClientSideWebPart<IAfish
               groupFields: [
                 PropertyPaneTextField('description', {
                   label: strings.DescriptionFieldLabel
+                }),
+                PropertyPaneSlider('maxMovies', {
+                  label: 'Максимальное количество фильмов',
+                  min: 5,
+                  max: 50,
+                  value: this.properties.maxMovies || 20,
+                  showValue: true,
+                  step: 5
+                }),
+                PropertyPaneToggle('showGenres', {
+                  label: 'Показывать жанры',
+                  checked: this.properties.showGenres !== false
+                }),
+                PropertyPaneToggle('showDates', {
+                  label: 'Показывать даты премьер',
+                  checked: this.properties.showDates !== false
+                }),
+                PropertyPaneToggle('autoRefresh', {
+                  label: 'Автоматическое обновление',
+                  checked: this.properties.autoRefresh || false
                 })
               ]
             }
@@ -117,5 +146,15 @@ export default class AfishaComponentWebPart extends BaseClientSideWebPart<IAfish
         }
       ]
     };
+  }
+
+  protected onPropertyPaneFieldChanged(propertyPath: string, oldValue: any, newValue: any): void {
+    if (propertyPath === 'autoRefresh' || 
+        propertyPath === 'maxMovies' || 
+        propertyPath === 'showGenres' || 
+        propertyPath === 'showDates') {
+      this.render();
+    }
+    super.onPropertyPaneFieldChanged(propertyPath, oldValue, newValue);
   }
 }

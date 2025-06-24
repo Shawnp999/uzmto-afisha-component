@@ -4,4 +4,10 @@ export interface IAfishaComponentProps {
   environmentMessage: string;
   hasTeamsContext: boolean;
   userDisplayName: string;
+  
+  maxMovies?: number;
+  showGenres?: boolean;
+  showDates?: boolean;
+  autoRefresh?: boolean;
+  refreshInterval?: number; // in minutes
 }
