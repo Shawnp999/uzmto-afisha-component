@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "uzmto-afisha-component-client-side-solution",
+    "id": "7f3f1cf3-e9b6-4569-a7ac-248f03abc285",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "",
+      "websiteUrl": "",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.18.0"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "uzmto-afisha-component description"
+      },
+      "longDescription": {
+        "default": "uzmto-afisha-component description"
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "uzmto-afisha-component Feature",
+        "description": "The feature that activates elements of the uzmto-afisha-component solution.",
+        "id": "8456d038-dd10-4450-9da7-fb3d8de3e37f",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/uzmto-afisha-component.sppkg"
+  }
+}
