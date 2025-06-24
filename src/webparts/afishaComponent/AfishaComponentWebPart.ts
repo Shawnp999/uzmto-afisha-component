@@ -139,6 +139,15 @@ export default class AfishaComponentWebPart extends BaseClientSideWebPart<IAfish
                 PropertyPaneToggle('autoRefresh', {
                   label: 'Автоматическое обновление',
                   checked: this.properties.autoRefresh || false
+                }),
+                PropertyPaneSlider('refreshInterval', {
+                  label: 'Интервал обновления (минуты)',
+                  min: 1,
+                  max: 120,
+                  value: this.properties.refreshInterval || 60,
+                  showValue: true,
+                  step: 5,
+                  disabled: !this.properties.autoRefresh
                 })
               ]
             }
@@ -152,7 +161,8 @@ export default class AfishaComponentWebPart extends BaseClientSideWebPart<IAfish
     if (propertyPath === 'autoRefresh' || 
         propertyPath === 'maxMovies' || 
         propertyPath === 'showGenres' || 
-        propertyPath === 'showDates') {
+        propertyPath === 'showDates' ||
+        propertyPath === 'refreshInterval') {
       this.render();
     }
     super.onPropertyPaneFieldChanged(propertyPath, oldValue, newValue);

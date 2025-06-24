@@ -61,7 +61,7 @@
   overflow: hidden;
   background-color: white;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  transition: transform 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
   cursor: pointer;
   text-decoration: none;
   color: inherit;
@@ -69,12 +69,18 @@
 
   &:hover {
     transform: translateY(-5px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     text-decoration: none;
     color: inherit;
   }
 
   &:visited {
     color: inherit;
+  }
+
+  &:focus {
+    outline: 2px solid #0078d4;
+    outline-offset: 2px;
   }
 }
 
@@ -84,6 +90,7 @@
   object-fit: cover;
   border-radius: 8px 8px 0 0;
   display: block;
+  transition: opacity 0.3s;
 }
 
 .placeholderPoster {
@@ -98,6 +105,12 @@
   text-align: center;
   padding: 20px;
   border-radius: 8px 8px 0 0;
+  
+  span {
+    background-color: rgba(255, 255, 255, 0.8);
+    padding: 8px 12px;
+    border-radius: 4px;
+  }
 }
 
 .movieInfo {
@@ -113,17 +126,20 @@
   text-overflow: ellipsis;
   color: "[theme:bodyText, default: #323130]";
   color: var(--bodyText);
+  line-height: 1.3;
 }
 
 .movieMeta {
   color: #777;
   font-size: 14px;
   margin-bottom: 8px;
+  line-height: 1.2;
 }
 
 .movieDate {
   color: #999;
   font-size: 14px;
+  line-height: 1.2;
 }
 
 .arrowNav {
@@ -142,10 +158,21 @@
   z-index: 10;
   font-size: 20px;
   font-weight: bold;
-  transition: background-color 0.2s;
-
+  transition: all 0.2s;
+  border: none;
+  
   &:hover {
     background-color: rgba(0, 0, 0, 0.7);
+    transform: translateY(-50%) scale(1.1);
+  }
+
+  &:focus {
+    outline: 2px solid #0078d4;
+    outline-offset: 2px;
+  }
+
+  &:active {
+    transform: translateY(-50%) scale(0.95);
   }
 }
 
@@ -163,6 +190,24 @@
   font-size: 18px;
   color: "[theme:bodyText, default: #323130]";
   color: var(--bodyText);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #0078d4;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .error {
@@ -174,9 +219,16 @@
   margin-bottom: 20px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.retryInfo {
+  font-size: 12px;
+  color: #666;
+  margin-top: 5px;
+  font-style: italic;
 }
 
 .retryButton {
@@ -188,14 +240,35 @@
   cursor: pointer;
   font-size: 14px;
   transition: background-color 0.2s;
+  min-width: 120px;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background-color: #106ebe;
   }
 
-  &:active {
+  &:active:not(:disabled) {
     background-color: #005a9e;
   }
+
+  &:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
+
+  &:focus {
+    outline: 2px solid #005a9e;
+    outline-offset: 2px;
+  }
+}
+
+.noData {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+  font-size: 16px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border: 1px dashed #ddd;
 }
 
 // Responsive design
@@ -223,9 +296,26 @@
     height: 35px;
     font-size: 18px;
   }
+
+  .error {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .retryButton {
+    align-self: center;
+  }
 }
 
 @media (max-width: 480px) {
+  .afishaComponent {
+    padding: 5px;
+  }
+
+  .title {
+    font-size: 20px;
+  }
+
   .movieCard {
     min-width: 140px;
     max-width: 140px;
@@ -243,5 +333,44 @@
   .movieMeta,
   .movieDate {
     font-size: 12px;
+  }
+
+  .arrowNav {
+    width: 30px;
+    height: 30px;
+    font-size: 16px;
+  }
+
+  .loader {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+// High contrast mode support
+@media (prefers-contrast: high) {
+  .movieCard {
+    border: 2px solid #000;
+  }
+  
+  .arrowNav {
+    border: 2px solid #fff;
+  }
+}
+
+// Reduced motion support
+@media (prefers-reduced-motion: reduce) {
+  .movieCard,
+  .arrowNav,
+  .moviePoster {
+    transition: none;
+  }
+  
+  .spinner {
+    animation: none;
+  }
+  
+  .moviesContainer {
+    scroll-behavior: auto;
   }
 }
