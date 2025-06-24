@@ -1,73 +1,188 @@
-# uzmto-afisha-component
+# UZMTO Афиша - SharePoint Framework Component
 
-## Summary
+## Описание
 
-Short summary on functionality and used technologies.
+SharePoint Framework веб-часть для отображения кинопремьер с сайта Afisha.uz. Компонент показывает карточки фильмов с постерами, жанрами и датами премьер в горизонтально прокручиваемом слайдере.
 
-[picture of the solution in action, if possible]
+![SPFx Version](https://img.shields.io/badge/SPFx-1.18.0-green.svg)
+![Node.js Version](https://img.shields.io/badge/Node.js-16.x-blue.svg)
+![React Version](https://img.shields.io/badge/React-17.0.1-blue.svg)
 
-## Used SharePoint Framework Version
+## Возможности
 
-![version](https://img.shields.io/badge/version-1.18.0-green.svg)
+- ✨ Отображение актуальных кинопремьер
+- 🎬 Карточки фильмов с постерами и информацией
+- 📱 Адаптивный дизайн для мобильных устройств
+- ⚙️ Настраиваемые параметры через Property Pane
+- 🔄 Автоматическое обновление данных
+- 🎨 Поддержка темной и светлой тем SharePoint
+- 🔗 Переход на страницы фильмов на Afisha.uz
 
-## Applies to
+## Технологии
 
-- [SharePoint Framework](https://aka.ms/spfx)
-- [Microsoft 365 tenant](https://docs.microsoft.com/en-us/sharepoint/dev/spfx/set-up-your-developer-tenant)
+- SharePoint Framework 1.18.0
+- React 17.0.1 + TypeScript
+- Fluent UI React
+- SCSS Modules
+- Node.js 16.x
 
-> Get your own free development tenant by subscribing to [Microsoft 365 developer program](http://aka.ms/o365devprogram)
+## Предварительные требования
 
-## Prerequisites
+- Node.js 16.x (LTS)
+- SharePoint Framework development environment
+- Gulp CLI: `npm install -g gulp-cli`
+- Yeoman SharePoint generator: `npm install -g @microsoft/generator-sharepoint`
 
-> Any special pre-requisites?
+## Установка и запуск
 
-## Solution
+### 1. Клонирование репозитория
+```bash
+git clone <repository-url>
+cd uzmto-afisha-component
+```
 
-| Solution    | Author(s)                                               |
-| ----------- | ------------------------------------------------------- |
-| folder name | Author details (name, company, twitter alias with link) |
+### 2. Установка зависимостей
+```bash
+npm install
+```
 
-## Version history
+### 3. Запуск в режиме разработки
+```bash
+gulp serve
+```
+Откроется браузер с SharePoint Workbench для тестирования компонента.
 
-| Version | Date             | Comments        |
-| ------- | ---------------- | --------------- |
-| 1.1     | March 10, 2021   | Update comment  |
-| 1.0     | January 29, 2021 | Initial release |
+### 4. Сборка для продакшена
+```bash
+gulp build
+gulp bundle --ship
+gulp package-solution --ship
+```
 
-## Disclaimer
+Файл `.sppkg` будет создан в папке `sharepoint/solution/`.
 
-**THIS CODE IS PROVIDED _AS IS_ WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING ANY IMPLIED WARRANTIES OF FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.**
+## Настройки компонента
 
----
+Компонент поддерживает следующие настройки через Property Pane:
 
-## Minimal Path to Awesome
+| Параметр | Описание | По умолчанию |
+|----------|----------|--------------|
+| Описание | Описание компонента | - |
+| Максимальное количество фильмов | Лимит отображаемых фильмов (5-50) | 20 |
+| Показывать жанры | Отображение жанров фильмов | Включено |
+| Показывать даты премьер | Отображение дат премьер | Включено |
+| Автоматическое обновление | Периодическое обновление данных | Выключено |
 
-- Clone this repository
-- Ensure that you are at the solution folder
-- in the command-line run:
-  - **npm install**
-  - **gulp serve**
+## Структура проекта
 
-> Include any additional steps as needed.
+```
+src/
+├── webparts/
+│   └── afishaComponent/
+│       ├── components/
+│       │   ├── AfishaComponent.tsx          # Основной React компонент
+│       │   ├── AfishaComponent.module.scss  # Стили компонента
+│       │   └── IAfishaComponentProps.ts     # Интерфейс props
+│       ├── loc/                             # Локализация
+│       ├── AfishaComponentWebPart.ts        # Главный файл веб-части
+│       └── AfishaComponentWebPart.manifest.json
+config/                                      # Конфигурационные файлы
+package.json                                # Зависимости проекта
+gulpfile.js                                 # Задачи сборки
+```
 
-## Features
+## API Integration
 
-Description of the extension that expands upon high-level summary above.
+Компонент использует API сайта Afisha.uz для получения данных о фильмах:
 
-This extension illustrates the following concepts:
+- **Endpoint**: `https://www.afisha.uz/api/videos/premieres`
+- **CORS Proxy**: `https://corsproxy.io/` (для обхода CORS ограничений)
+- **Параметры**: локаль, регион премьеры, даты фильтров
 
-- topic 1
-- topic 2
-- topic 3
+### Пример ответа API:
+```json
+{
+  "hydra:member": [
+    {
+      "@id": "/api/videos/123",
+      "title": "Название фильма",
+      "originalTitle": "Original Title",
+      "slug": "film-slug",
+      "year": 2025,
+      "genres": [{"name": "Драма"}],
+      "mainMediaObject": {
+        "variantUrls": {
+          "medium": "/uploads/media/poster.jpg"
+        }
+      },
+      "worldPremiereDate": "2025-06-01T00:00:00+05:00"
+    }
+  ]
+}
+```
 
-> Notice that better pictures and documentation will increase the sample usage and the value you are providing for others. Thanks for your submissions advance.
+## Развертывание
 
-> Share your web part with others through Microsoft 365 Patterns and Practices program to get visibility and exposure. More details on the community, open-source projects and other activities from http://aka.ms/m365pnp.
+### В SharePoint Online
+1. Соберите решение: `gulp package-solution --ship`
+2. Загрузите `.sppkg` файл в App Catalog
+3. Разверните приложение на нужных сайтах
+4. Добавьте веб-часть на страницу
 
-## References
+### В SharePoint On-Premises
+1. Убедитесь в совместимости SPFx версии
+2. Настройте CDN для статических ресурсов
+3. Загрузите в локальный App Catalog
 
-- [Getting started with SharePoint Framework](https://docs.microsoft.com/en-us/sharepoint/dev/spfx/set-up-your-developer-tenant)
-- [Building for Microsoft teams](https://docs.microsoft.com/en-us/sharepoint/dev/spfx/build-for-teams-overview)
-- [Use Microsoft Graph in your solution](https://docs.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/get-started/using-microsoft-graph-apis)
-- [Publish SharePoint Framework applications to the Marketplace](https://docs.microsoft.com/en-us/sharepoint/dev/spfx/publish-to-marketplace-overview)
-- [Microsoft 365 Patterns and Practices](https://aka.ms/m365pnp) - Guidance, tooling, samples and open-source controls for your Microsoft 365 development
+## Команды разработки
+
+| Команда | Описание |
+|---------|----------|
+| `npm install` | Установка зависимостей |
+| `gulp serve` | Запуск dev server |
+| `gulp build` | Сборка проекта |
+| `gulp clean` | Очистка временных файлов |
+| `gulp test` | Запуск тестов |
+| `gulp package-solution` | Создание .sppkg пакета |
+
+## Troubleshooting
+
+### Распространенные проблемы:
+
+1. **CORS ошибки**: Компонент использует CORS proxy. Убедитесь в доступности `corsproxy.io`
+
+2. **Ошибки Node.js**: Используйте Node.js 16.x LTS
+
+3. **Проблемы сборки**: Очистите кеш:
+   ```bash
+   npm cache clean --force
+   rm -rf node_modules
+   npm install
+   ```
+
+4. **Отсутствуют изображения**: Проверьте доступность CDN Afisha.uz
+
+## Лицензия
+
+MIT License - см. файл LICENSE
+
+## Автор
+
+Разработано для UZMTO
+
+## Contributing
+
+1. Fork проекта
+2. Создайте feature branch
+3. Commit изменения
+4. Push в branch
+5. Создайте Pull Request
+
+## Changelog
+
+### v1.0.0
+- Первый релиз
+- Интеграция с Afisha.uz API
+- Адаптивный дизайн
+- Настройки Property Pane
+- Поддержка тем SharePoint
