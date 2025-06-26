@@ -1,6 +1,7 @@
 import * as React from 'react';
 import styles from './AfishaComponent.module.scss';
 import type { IAfishaComponentProps } from './IAfishaComponentProps';
+import { HttpClient, HttpClientResponse } from '@microsoft/sp-http';
 
 // Interface for movie data
 interface IMovie {
@@ -27,12 +28,12 @@ export default class AfishaComponent extends React.Component<IAfishaComponentPro
   private moviesContainerRef = React.createRef<HTMLDivElement>();
   private refreshInterval: number | null = null;
 
-  // Alternative CORS proxies to try
+  // Working CORS proxies (prioritized by reliability)
   private corsProxies: string[] = [
-    'https://api.allorigins.win/raw?url=',
-    'https://cors-anywhere.herokuapp.com/',
-    'https://corsproxy.io/?',
-    'https://api.codetabs.com/v1/proxy?quest='
+    'https://api.codetabs.com/v1/proxy/?quest=', // This one works!
+    'https://api.allorigins.win/get?url=',
+    'https://thingproxy.freeboard.io/fetch/',
+    'https://cors-proxy.htmldriven.com/?url='
   ];
 
   constructor(props: IAfishaComponentProps) {
@@ -52,7 +53,7 @@ export default class AfishaComponent extends React.Component<IAfishaComponentPro
     if (this.props.autoRefresh && this.props.refreshInterval) {
       this.refreshInterval = window.setInterval(() => {
         this.fetchMovies();
-      }, this.props.refreshInterval * 60 * 1000); // Convert minutes to milliseconds
+      }, this.props.refreshInterval * 60 * 1000);
     }
   }
 
@@ -63,7 +64,6 @@ export default class AfishaComponent extends React.Component<IAfishaComponentPro
   }
 
   public componentDidUpdate(prevProps: IAfishaComponentProps): void {
-    // Restart auto-refresh if settings changed
     if (prevProps.autoRefresh !== this.props.autoRefresh || 
         prevProps.refreshInterval !== this.props.refreshInterval) {
       
@@ -84,56 +84,79 @@ export default class AfishaComponent extends React.Component<IAfishaComponentPro
     this.setState({ loading: true, error: '' });
 
     try {
-      // Method 1: Try direct API call first (might work in some environments)
       const directUrl = 'https://www.afisha.uz/api/videos/premieres?locale=ru&premiereRegion=world&premieredAtAfter=2025-05-02T00%3A00%3A00%2B05%3A00&premieredAtStrictlyBefore=2025-07-02T00%3A00%3A00%2B05%3A00&itemsPerPage=20&page=1';
       
-      let response: Response | null = null;
       let data: any = null;
 
-      // Try direct call first
+      // Method 1: Try SharePoint HttpClient (recommended for SPFx)
       try {
-        response = await fetch(directUrl, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        if (response.ok) {
-          data = await response.json();
+        console.log('Trying SharePoint HttpClient...');
+        if (this.props.context && this.props.context.serviceScope) {
+          const httpClient: HttpClient = this.props.context.serviceScope.consume(HttpClient.serviceKey);
+          if (httpClient) {
+            const response: HttpClientResponse = await httpClient.get(directUrl, HttpClient.configurations.v1);
+            if (response.ok) {
+              data = await response.json();
+              console.log('Successfully fetched data using SharePoint HttpClient');
+            }
+          }
         }
-      } catch (directError) {
-        console.log('Direct API call failed, trying CORS proxies...');
+      } catch (spError) {
+        console.log('SharePoint HttpClient failed:', spError);
       }
 
-      // If direct call failed, try CORS proxies
+      // Method 2: Try CORS proxies if SharePoint HttpClient failed
       if (!data) {
         for (let i = 0; i < this.corsProxies.length; i++) {
           try {
             const proxyUrl = this.corsProxies[i];
-            const fullUrl = proxyUrl + encodeURIComponent(directUrl);
+            let fullUrl: string;
+
+            // Handle different proxy URL formats
+            if (proxyUrl.includes('allorigins.win')) {
+              fullUrl = proxyUrl + encodeURIComponent(directUrl);
+            } else if (proxyUrl.includes('thingproxy.freeboard.io')) {
+              fullUrl = proxyUrl + directUrl;
+            } else {
+              fullUrl = proxyUrl + encodeURIComponent(directUrl);
+            }
             
             console.log(`Trying proxy ${i + 1}/${this.corsProxies.length}: ${proxyUrl}`);
             
-            response = await fetch(fullUrl, {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+            
+            const response = await fetch(fullUrl, {
               method: 'GET',
               headers: {
                 'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
               },
+              signal: controller.signal,
+              mode: 'cors',
+              cache: 'no-cache'
             });
+            
+            clearTimeout(timeoutId);
             
             if (response.ok) {
               const responseText = await response.text();
               try {
-                data = JSON.parse(responseText);
+                // Handle different proxy response formats
+                if (proxyUrl.includes('allorigins.win')) {
+                  const proxyResponse = JSON.parse(responseText);
+                  data = JSON.parse(proxyResponse.contents);
+                } else {
+                  data = JSON.parse(responseText);
+                }
                 console.log(`Successfully fetched data using proxy: ${proxyUrl}`);
                 break;
               } catch (parseError) {
-                console.log(`Failed to parse JSON from proxy ${i + 1}`);
+                console.log(`Failed to parse JSON from proxy ${i + 1}:`, parseError);
                 continue;
               }
+            } else {
+              console.log(`Proxy ${i + 1} returned status: ${response.status}`);
             }
           } catch (proxyError) {
             console.log(`Proxy ${i + 1} failed:`, proxyError);
@@ -143,14 +166,11 @@ export default class AfishaComponent extends React.Component<IAfishaComponentPro
       }
 
       if (!data) {
-        // Use mock data as fallback
-        data = this.getMockData();
-        console.log('Using mock data as fallback');
+        throw new Error('Все методы загрузки данных недоступны. Проверьте подключение к интернету.');
       }
 
       const processedMovies = this.processMoviesData(data);
       
-      // Apply maxMovies limit if specified
       const limitedMovies = this.props.maxMovies 
         ? processedMovies.slice(0, this.props.maxMovies)
         : processedMovies;
@@ -164,84 +184,13 @@ export default class AfishaComponent extends React.Component<IAfishaComponentPro
 
     } catch (error) {
       console.error('Error fetching movies:', error);
-      
-      // Use mock data as fallback on error
-      try {
-        const mockData = this.getMockData();
-        const processedMovies = this.processMoviesData(mockData);
-        const limitedMovies = this.props.maxMovies 
-          ? processedMovies.slice(0, this.props.maxMovies)
-          : processedMovies;
-        
-        this.setState({ 
-          movies: limitedMovies, 
-          loading: false, 
-          error: 'Используются демонстрационные данные. Проверьте подключение к интернету.',
-          retryCount: this.state.retryCount + 1
-        });
-      } catch (mockError) {
-        this.setState({ 
-          error: `Ошибка загрузки фильмов: ${(error as Error).message}`, 
-          loading: false,
-          retryCount: this.state.retryCount + 1
-        });
-      }
+      this.setState({ 
+        error: `Ошибка загрузки данных: ${(error as Error).message}`, 
+        loading: false,
+        movies: [], // Clear movies on error
+        retryCount: this.state.retryCount + 1
+      });
     }
-  }
-
-  private getMockData(): any {
-    return {
-      'hydra:member': [
-        {
-          '@id': 'mock-1',
-          title: 'Дюна: Часть вторая',
-          originalTitle: 'Dune: Part Two',
-          slug: 'dune-part-two',
-          type: 'movie',
-          year: 2024,
-          mainMediaObject: {
-            variantUrls: {
-              medium: 'https://via.placeholder.com/300x450/0066cc/ffffff?text=Dune+2'
-            }
-          },
-          worldPremiereDate: '2024-03-01T00:00:00+05:00',
-          russiaPremiereDate: '2024-03-01T00:00:00+05:00',
-          genres: [{ name: 'Фантастика' }, { name: 'Драма' }]
-        },
-        {
-          '@id': 'mock-2',
-          title: 'Оппенгеймер',
-          originalTitle: 'Oppenheimer',
-          slug: 'oppenheimer',
-          type: 'movie',
-          year: 2023,
-          mainMediaObject: {
-            variantUrls: {
-              medium: 'https://via.placeholder.com/300x450/cc6600/ffffff?text=Oppenheimer'
-            }
-          },
-          worldPremiereDate: '2023-07-21T00:00:00+05:00',
-          russiaPremiereDate: '2023-07-21T00:00:00+05:00',
-          genres: [{ name: 'Драма' }, { name: 'История' }]
-        },
-        {
-          '@id': 'mock-3',
-          title: 'Барби',
-          originalTitle: 'Barbie',
-          slug: 'barbie',
-          type: 'movie',
-          year: 2023,
-          mainMediaObject: {
-            variantUrls: {
-              medium: 'https://via.placeholder.com/300x450/ff69b4/ffffff?text=Barbie'
-            }
-          },
-          worldPremiereDate: '2023-07-21T00:00:00+05:00',
-          russiaPremiereDate: '2023-07-21T00:00:00+05:00',
-          genres: [{ name: 'Комедия' }, { name: 'Фэнтези' }]
-        }
-      ]
-    };
   }
 
   private processMoviesData(data: any): IMovie[] {
@@ -314,7 +263,9 @@ export default class AfishaComponent extends React.Component<IAfishaComponentPro
       >
         {movie.posterUrl ? (
           <img 
-            src={movie.posterUrl.startsWith('http') ? movie.posterUrl : `https://www.afisha.uz${movie.posterUrl}`}
+            src={movie.posterUrl.startsWith('http') || movie.posterUrl.startsWith('data:') 
+              ? movie.posterUrl 
+              : `https://www.afisha.uz${movie.posterUrl}`}
             alt={movie.title}
             className={styles.moviePoster}
             onError={(e) => {
@@ -326,7 +277,7 @@ export default class AfishaComponent extends React.Component<IAfishaComponentPro
           />
         ) : null}
         <div className={styles.placeholderPoster} style={{ display: movie.posterUrl ? 'none' : 'flex' }}>
-          <span>Нет фото</span>
+          <span>🎬</span>
         </div>
         <div className={styles.movieInfo}>
           <div className={styles.movieTitle} title={movie.title}>
